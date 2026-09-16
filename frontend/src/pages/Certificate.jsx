@@ -28,10 +28,14 @@ const Certificate = () => {
                 setError("");
 
                 const response = await fetch(
-                    `http://localhost:5000/api/certificates/${encodeURIComponent(certificateId)}`
+                    `${import.meta.env.VITE_API_URL}/api/certificates/${encodeURIComponent(certificateId)}`
                 );
 
                 const data = await response.json();
+
+                console.log("STATUS:", response.status);
+                console.log("API DATA:", data);
+                console.log("CERTIFICATE DATA:", data.certificate);
 
                 if (!response.ok) {
                     throw new Error(data.message || "Certificate not found");
@@ -67,7 +71,7 @@ const Certificate = () => {
 
                     {/* Title */}
                     <span className="text-sm font-semibold tracking-tight text-white sm:text-lg md:text-xl">
-                        Certificate Verification
+                        Certificate <span className="text-[#39FF14]">Verification</span>
                     </span>
 
                 </div>
@@ -222,7 +226,6 @@ const Certificate = () => {
                                 </div>
                             </div>
 
-                            {/* Certificate Preview */}
                             {/* Certificate Preview */}
                             <div className="flex w-full justify-center">
                                 <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-zinc-950 p-1 shadow-[0_0_50px_rgba(57,255,20,0.08)] sm:rounded-2xl sm:p-2">

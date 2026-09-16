@@ -29,7 +29,7 @@ const getCertificate = async (req, res, next) => {
             });
         }
 
-        res.status(200).json({
+        res.status(200).set("Cache-Control", "no-store").json({
             success: true,
             certificate,
         });

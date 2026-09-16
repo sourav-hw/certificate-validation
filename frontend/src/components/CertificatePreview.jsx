@@ -1,6 +1,16 @@
 import { CheckCircle2 } from "lucide-react";
 
-const CertificatePreview = ({ certificateId }) => {
+const CertificatePreview = ({ certificate }) => {
+    const formatDate = (date) => {
+        if (!date) return "-";
+
+        return new Date(date).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
+    };
+
     return (
         <div className="w-full max-w-5xl">
             {/* Verification Status */}
@@ -30,18 +40,18 @@ const CertificatePreview = ({ certificateId }) => {
                         </p>
 
                         <p className="mt-1 break-words text-sm font-medium text-white sm:text-base">
-                            John Doe
+                            {certificate.studentName}
                         </p>
                     </div>
 
-                    {/* Email */}
+                    {/* Student ID */}
                     <div className="min-w-0">
                         <p className="text-[10px] uppercase tracking-wider text-zinc-600 sm:text-xs">
-                            Email ID
+                            Student ID
                         </p>
 
                         <p className="mt-1 break-all text-sm font-medium text-white sm:text-base">
-                            john.doe@example.com
+                            {certificate.studentId}
                         </p>
                     </div>
 
@@ -52,18 +62,51 @@ const CertificatePreview = ({ certificateId }) => {
                         </p>
 
                         <p className="mt-1 break-all text-sm font-medium text-white sm:text-base">
-                            {certificateId}
+                            {certificate.certificateId}
                         </p>
                     </div>
 
-                    {/* Certificate */}
+                    {/* Course */}
                     <div className="min-w-0">
                         <p className="text-[10px] uppercase tracking-wider text-zinc-600 sm:text-xs">
-                            Certificate
+                            Course / Program
                         </p>
 
                         <p className="mt-1 break-words text-sm font-medium text-white sm:text-base">
-                            Offenso Certified Security Analyst
+                            {certificate.course}
+                        </p>
+                    </div>
+
+                    {/* Batch */}
+                    <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-600 sm:text-xs">
+                            Batch
+                        </p>
+
+                        <p className="mt-1 break-words text-sm font-medium text-white sm:text-base">
+                            {certificate.batch}
+                        </p>
+                    </div>
+
+                    {/* Issued Date */}
+                    <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-600 sm:text-xs">
+                            Issued Date
+                        </p>
+
+                        <p className="mt-1 break-words text-sm font-medium text-white sm:text-base">
+                            {formatDate(certificate.issuedDate)}
+                        </p>
+                    </div>
+
+                    {/* Branch */}
+                    <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-600 sm:text-xs">
+                            Branch
+                        </p>
+
+                        <p className="mt-1 break-words text-sm font-medium text-white sm:text-base">
+                            {certificate.branch || "-"}
                         </p>
                     </div>
                 </div>
@@ -75,7 +118,7 @@ const CertificatePreview = ({ certificateId }) => {
                     <div className="overflow-hidden rounded-lg bg-white sm:rounded-xl">
                         <img
                             src="/OCSA-preview.png"
-                            alt="OCSA Certificate"
+                            alt={`${certificate.course} Certificate`}
                             className="block h-auto w-full"
                         />
                     </div>

@@ -8,12 +8,11 @@ const certificateSchema = new mongoose.Schema(
             trim: true,
         },
 
-        email: {
+        studentId: {
             type: String,
             required: true,
             unique: true,
             trim: true,
-            lowercase: true,
         },
 
         course: {

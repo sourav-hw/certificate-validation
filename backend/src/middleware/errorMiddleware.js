@@ -11,8 +11,8 @@ const errorHandler = (err, req, res, next) => {
             message = "Certificate ID already exists";
         }
 
-        if (field === "email") {
-            message = "Email already exists";
+        if (field === "studentId") {
+            message = "Student ID already exists";
         }
 
         return res.status(409).json({

@@ -1,2 +1,8 @@
 node_modules/
 .env
+
+# Migration data
+*.xlsx
+*.xls
+
+.env.local

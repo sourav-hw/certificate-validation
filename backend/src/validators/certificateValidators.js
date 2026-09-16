@@ -3,11 +3,10 @@ const { z } = require("zod");
 const certificateSchema = z.object({
     studentName: z.string().trim().min(2, "Student name is required"),
 
-    email: z
+    studentId: z
         .string()
         .trim()
-        .email("Invalid email address")
-        .transform((value) => value.toLowerCase()),
+        .min(1, "Student ID is required"),
 
     course: z.string().trim().min(2, "Course is required"),
 
