@@ -1,12 +1,25 @@
 from openpyxl import load_workbook
 from datetime import datetime
+import os
+import requests
 
 
 # ==============================
 # Configuration
 # ==============================
 
-EXCEL_FILE = "calicut_certificate.xlsx"
+EXCEL_FILE = "trivandrum_certificate.xlsx"
+
+API_URL = os.getenv(
+    "CERTIFICATE_API_URL",
+    "http://192.168.56.100/api/certificates"
+)
+
+API_KEY = os.getenv("CERTIFICATE_API_KEY")
+
+# Safety switch
+DRY_RUN = True
+
 
 REQUIRED_COLUMNS = [
     "Student Name",
@@ -18,12 +31,15 @@ REQUIRED_COLUMNS = [
     "Branch",
 ]
 
-VALID_CERTIFICATE_TYPES = {
-    "ADIS",
-    "OCSA",
-    "OCSP",
-    "CJWH",
-}
+
+# ==============================
+# Check API Key
+# ==============================
+
+if not API_KEY:
+    print("\nERROR: CERTIFICATE_API_KEY environment variable is not set.")
+    print("Migration stopped.")
+    raise SystemExit(1)
 
 
 # ==============================
@@ -43,6 +59,8 @@ def clean_string(value):
 def format_date(value):
     """
     Convert Excel date into YYYY-MM-DD format.
+    Supports Excel date values and text dates
+    such as 06/11/2025, 06-11-2025, and 04-07-26.
     """
 
     if isinstance(value, datetime):
@@ -53,38 +71,42 @@ def format_date(value):
 
     value = str(value).strip()
 
+    if not value:
+        return ""
+
+    for date_format in ("%d/%m/%Y", "%d-%m-%Y", "%d-%m-%y", "%d/%m/%y"):
+        try:
+            parsed_date = datetime.strptime(value, date_format)
+            return parsed_date.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
     return value
-
-
-def get_certificate_type(course):
-    """
-    Determine certificate type from Course/Program.
-    """
-
-    course = clean_string(course).upper()
-
-    if course in VALID_CERTIFICATE_TYPES:
-        return course
-
-    return ""
 
 
 # ==============================
 # Load Excel
 # ==============================
 
-workbook = load_workbook(
-    EXCEL_FILE,
-    data_only=True
-)
+try:
+    workbook = load_workbook(
+        EXCEL_FILE,
+        data_only=True
+    )
+except Exception as error:
+    print(f"\nERROR: Could not open Excel file: {error}")
+    raise SystemExit(1)
+
 
 sheet = workbook.active
 
+
 print("\n========================================")
-print("CERTIFICATE DATA VALIDATION")
+print("CERTIFICATE DATA MIGRATION")
 print("========================================")
 
 print(f"\nExcel sheet: {sheet.title}")
+print(f"API URL: {API_URL}")
 
 
 # ==============================
@@ -107,6 +129,7 @@ for index, header in enumerate(headers, start=1):
 # ==============================
 
 if headers != REQUIRED_COLUMNS:
+
     print("\nERROR: Excel columns do not match expected columns.")
 
     print("\nExpected:")
@@ -117,7 +140,7 @@ if headers != REQUIRED_COLUMNS:
     for column in headers:
         print(f"- {column}")
 
-    raise SystemExit
+    raise SystemExit(1)
 
 
 print("\nColumn structure: OK")
@@ -135,9 +158,10 @@ certificate_ids = {}
 
 total_rows = 0
 
+
 for row_number in range(2, sheet.max_row + 1):
 
-    # Read the first 7 cells
+    # Read first 7 cells
     row_values = [
         sheet.cell(row=row_number, column=column).value
         for column in range(1, 8)
@@ -147,7 +171,6 @@ for row_number in range(2, sheet.max_row + 1):
     if all(value is None for value in row_values):
         continue
 
-    # Count only rows that actually contain data
     total_rows += 1
 
     # --------------------------------
@@ -174,8 +197,6 @@ for row_number in range(2, sheet.max_row + 1):
     branch = clean_string(branch)
 
     issued_date = format_date(issued_date)
-
-    certificate_type = get_certificate_type(course)
 
     # --------------------------------
     # Validation
@@ -204,11 +225,6 @@ for row_number in range(2, sheet.max_row + 1):
     if not branch:
         errors.append("Branch is missing")
 
-    if not certificate_type:
-        errors.append(
-            f"Invalid certificate type: {course}"
-        )
-
     # --------------------------------
     # Check duplicate Student ID
     # --------------------------------
@@ -216,10 +232,12 @@ for row_number in range(2, sheet.max_row + 1):
     if student_id:
 
         if student_id in student_ids:
+
             errors.append(
                 f"Duplicate Student ID "
                 f"(also found in row {student_ids[student_id]})"
             )
+
         else:
             student_ids[student_id] = row_number
 
@@ -230,10 +248,12 @@ for row_number in range(2, sheet.max_row + 1):
     if certificate_id:
 
         if certificate_id in certificate_ids:
+
             errors.append(
                 f"Duplicate Certificate ID "
                 f"(also found in row {certificate_ids[certificate_id]})"
             )
+
         else:
             certificate_ids[certificate_id] = row_number
 
@@ -249,7 +269,6 @@ for row_number in range(2, sheet.max_row + 1):
         "certificateId": certificate_id,
         "issuedDate": issued_date,
         "branch": branch,
-        "certificateType": certificate_type,
     }
 
     # --------------------------------
@@ -267,8 +286,10 @@ for row_number in range(2, sheet.max_row + 1):
     else:
 
         valid_records.append(record)
+
+
 # ==============================
-# Summary
+# Validation Summary
 # ==============================
 
 print("\n========================================")
@@ -312,11 +333,11 @@ if invalid_records:
 
 
 # ==============================
-# Show sample mapped records
+# Show sample records
 # ==============================
 
 print("\n========================================")
-print("SAMPLE MAPPED RECORDS")
+print("SAMPLE VALID RECORDS")
 print("========================================")
 
 for index, record in enumerate(valid_records[:5], start=1):
@@ -328,19 +349,173 @@ for index, record in enumerate(valid_records[:5], start=1):
 
 
 # ==============================
-# Final status
+# Stop if validation failed
 # ==============================
 
-print("\n========================================")
-
 if invalid_records:
-    print("STATUS: VALIDATION FAILED")
-    print("Please fix the invalid records before migration.")
+    print("\n========================================")
+    print("INVALID RECORDS")
+    print("========================================")
+    print(f"\n{len(invalid_records)} invalid records found.")
+    print("These records will be skipped.")
+    print("The valid records will continue to migration.")
+
+
+# ==============================
+# Migration
+# ==============================
+
+# ==============================
+# Migration
+# ==============================
+
+if DRY_RUN:
+
+    print("\n========================================")
+    print("DRY RUN MODE")
+    print("========================================")
+
+    print(f"\nRecords that would be migrated: {len(valid_records)}")
+    print(f"Records that would be skipped: {len(invalid_records)}")
+
+    print("\nNo API requests will be made.")
+    print("No data will be inserted into MongoDB.")
 
 else:
-    print("STATUS: VALIDATION PASSED")
-    print("All records are ready for migration.")
 
-print("\nNO DATA WAS SENT TO MONGODB.")
-print("NO API REQUESTS WERE MADE.")
-print("========================================")
+    print("\n========================================")
+    print("STARTING MIGRATION")
+    print("========================================")
+
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    migrated_count = 0
+    skipped_count = 0
+    failed_count = 0
+
+    failed_records = []
+
+    for index, record in enumerate(valid_records, start=1):
+
+        print(
+            f"\n[{index}/{len(valid_records)}] "
+            f"Migrating: {record['certificateId']}"
+        )
+
+        try:
+
+            response = requests.post(
+                API_URL,
+                json=record,
+                headers=headers,
+                timeout=15,
+            )
+
+            if response.status_code == 201:
+
+                migrated_count += 1
+
+                print("  SUCCESS: Certificate migrated.")
+
+            elif response.status_code == 409:
+
+                skipped_count += 1
+
+                print(
+                    "  SKIPPED: Certificate already exists."
+                )
+
+            elif response.status_code == 401:
+
+                print(
+                    "\nERROR: API authentication failed."
+                )
+
+                print(
+                    "Check CERTIFICATE_API_KEY."
+                )
+
+                print("\nMigration stopped.")
+
+                raise SystemExit(1)
+
+            else:
+
+                failed_count += 1
+
+                try:
+                    error_data = response.json()
+                except Exception:
+                    error_data = response.text
+
+                print(
+                    f"  FAILED: HTTP {response.status_code}"
+                )
+
+                print(
+                    f"  Response: {error_data}"
+                )
+
+                failed_records.append({
+                    "certificateId": record["certificateId"],
+                    "studentId": record["studentId"],
+                    "status": response.status_code,
+                    "response": error_data,
+                })
+
+        except requests.exceptions.RequestException as error:
+
+            failed_count += 1
+
+            print(
+                f"  FAILED: Request error: {error}"
+            )
+
+            failed_records.append({
+                "certificateId": record["certificateId"],
+                "studentId": record["studentId"],
+                "status": "REQUEST_ERROR",
+                "response": str(error),
+            })
+
+    # ==============================
+    # Migration Summary
+    # ==============================
+
+    print("\n========================================")
+    print("MIGRATION SUMMARY")
+    print("========================================")
+
+    print(f"\nTotal Excel records: {total_rows}")
+    print(f"Valid records: {len(valid_records)}")
+    print(f"Invalid records: {len(invalid_records)}")
+    print(f"Successfully migrated: {migrated_count}")
+    print(f"Already existed / skipped: {skipped_count}")
+    print(f"Failed: {failed_count}")
+
+    if failed_records:
+
+        print("\n========================================")
+        print("FAILED MIGRATIONS")
+        print("========================================")
+
+        for item in failed_records:
+
+            print(f"\nCertificate ID: {item['certificateId']}")
+            print(f"Student ID: {item['studentId']}")
+            print(f"Status: {item['status']}")
+            print(f"Response: {item['response']}")
+
+    print("\n========================================")
+
+    if failed_count == 0:
+        print("MIGRATION COMPLETED SUCCESSFULLY")
+    else:
+        print("MIGRATION COMPLETED WITH ERRORS")
+
+    print("========================================")
+
+
