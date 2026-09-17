@@ -231,19 +231,21 @@ const Certificate = () => {
                                 <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-zinc-950 p-1 shadow-[0_0_50px_rgba(57,255,20,0.08)] sm:rounded-2xl sm:p-2">
                                     <div className="overflow-hidden rounded-lg bg-white sm:rounded-xl">
 
-                                        {certificate.certificateType === "ADIS" && (
+                                        console.log("CERTIFICATE DATA:", data.certificate);
+
+                                        {certificate.course === "ADIS" && (
                                             <ADISPreview certificate={certificate} />
                                         )}
 
-                                        {certificate.certificateType === "OCSA" && (
+                                        {certificate.course === "OCSA" && (
                                             <OCSAPreview certificate={certificate} />
                                         )}
 
-                                        {certificate.certificateType === "OCSP" && (
+                                        {certificate.course === "OCSP" && (
                                             <OCSPPreview certificate={certificate} />
                                         )}
 
-                                        {certificate.certificateType === "CJWH" && (
+                                        {certificate.course === "CJWH" && (
                                             <CJWHPreview certificate={certificate} />
                                         )}
 

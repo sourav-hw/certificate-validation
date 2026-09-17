@@ -17,8 +17,6 @@ const certificateSchema = z.object({
     issuedDate: z.coerce.date(),
 
     branch: z.string().trim().optional(),
-
-    certificateType: z.enum(["ADIS", "OCSA", "OCSP", "CJWH"]),
 });
 
 module.exports = certificateSchema;

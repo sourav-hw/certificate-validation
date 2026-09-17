@@ -43,12 +43,6 @@ const certificateSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
-
-        certificateType: {
-            type: String,
-            required: true,
-            enum: ["ADIS", "OCSA", "OCSP", "CJWH"],
-        },
     },
     {
         timestamps: true,
